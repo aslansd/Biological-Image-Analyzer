@@ -1,0 +1,8 @@
+{
+  "name": "Biological Image Analyzer",
+  "description": "An interactive AI-powered microscopy assistant for researchers and pathobiology. Segment cells, trace dendrites, calculate staining intensity, and explore diagnostic justifications with Explainable AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
