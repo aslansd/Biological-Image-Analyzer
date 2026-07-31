@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # Type checking is meaningful again now that @types/react is installed —
+      # without it TypeScript silently treated every React value as `any`.
+      - name: Type check
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      # Catches the class of bug where an asset resolves in dev but is never
+      # emitted into dist/ (which is how all five sample images used to 404).
+      - name: Verify sample assets were emitted
+        run: |
+          count=$(find dist/assets -name 'sample_*.jpg' | wc -l)
+          echo "Found $count sample images in dist/assets"
+          test "$count" -eq 5
+
+      - name: Boot the production server and probe it
+        run: |
+          NODE_ENV=production PORT=8080 node dist/server.cjs &
+          pid=$!
+          for i in $(seq 1 20); do
+            sleep 1
+            if curl -sf http://localhost:8080/api/health > /dev/null; then break; fi
+          done
+          curl -sf http://localhost:8080/api/health
+          curl -sf -o /dev/null http://localhost:8080/
+          kill $pid
