@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Detection, DetectionCategory } from '../types';
-import { Info, Sparkles, Send, Loader2, BookOpen, BrainCircuit } from 'lucide-react';
+import { Sparkles, Send, Loader2, BrainCircuit } from 'lucide-react';
 
 interface ExplainableAIPanelProps {
   category: DetectionCategory;
@@ -24,7 +24,22 @@ export default function ExplainableAIPanel({
       setMessages([
         {
           sender: 'ai',
-          text: `🔬 **Explainable AI Insights for ${selectedDetection.label}**\n\n**Visual Parameters Detected:**\n* **Category**: ${category.toUpperCase()}\n* **Type**: ${selectedDetection.type}\n* **Area**: ${selectedDetection.attributes.area || 'N/A'} µm²\n* **Confidence**: ${Math.round(selectedDetection.confidence * 100)}%\n* **Status**: ${selectedDetection.attributes.status?.toUpperCase() || 'NORMAL'}\n\n**Diagnostic Rationale:**\n${selectedDetection.explanation}\n\n*You can ask me specific questions about this detection's morphology, clinical implications, or ask for recommended filters (e.g., deconvolution).*`
+          text: (() => {
+            const m = selectedDetection.measured;
+            const area = m
+              ? m.areaMicrons2 !== undefined
+                ? `${m.areaMicrons2.toLocaleString()} µm²`
+                : `${m.areaPx.toLocaleString()} px² (uncalibrated)`
+              : 'not yet measured';
+
+            // Measured values are stated as measured; the model's own guess is
+            // shown separately so the two are never conflated.
+            const measuredBlock = m
+              ? `**Measured from pixels:**\n* **Area**: ${area}\n* **Circularity**: ${m.circularity}\n* **Mean grey value**: ${m.meanIntensity} (median ${m.medianIntensity}, SD ${m.stdDev})\n* **Channel means**: R ${m.channels.r} · G ${m.channels.g} · B ${m.channels.b}\n* **Integrated density**: ${m.integratedDensity.toLocaleString()} over ${m.pixelCount.toLocaleString()} px\n`
+              : '**Measurements unavailable** — pixel data could not be read for this frame.\n';
+
+            return `🔬 **${selectedDetection.label}**\n\n* **Category**: ${category.toUpperCase()}\n* **Type**: ${selectedDetection.type}\n* **Detector confidence**: ${Math.round(selectedDetection.confidence * 100)}%\n* **Status**: ${selectedDetection.attributes.status?.toUpperCase() || 'NORMAL'}\n\n${measuredBlock}\n**Classification rationale:**\n${selectedDetection.explanation}\n\n*Ask about this structure's morphology, what the intensity distribution implies, or which filters would sharpen the segmentation.*`;
+          })()
         }
       ]);
     } else {
