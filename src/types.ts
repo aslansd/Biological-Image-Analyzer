@@ -10,6 +10,42 @@ export type DetectionType =
   | 'stomata' 
   | 'disease_spot';
 
+/**
+ * Measured, not estimated. Every field here is computed from the actual image
+ * pixels enclosed by the detection's ROI. Kept separate from `attributes`,
+ * which holds whatever the model or the packaged dataset *claimed*, so the UI
+ * can always show the user which is which.
+ */
+export interface Measurement {
+  areaPx: number;
+  perimeterPx: number;
+  lengthPx?: number;
+  circularity: number;
+  equivalentDiameterPx: number;
+  maxFeretPx: number;
+  areaMicrons2?: number;
+  perimeterMicrons?: number;
+  lengthMicrons?: number;
+  meanIntensity: number;
+  medianIntensity: number;
+  minIntensity: number;
+  maxIntensity: number;
+  stdDev: number;
+  integratedDensity: number;
+  channels: { r: number; g: number; b: number };
+  pixelCount: number;
+}
+
+export interface HistogramBin {
+  intensity: number;
+  count: number;
+  r?: number;
+  g?: number;
+  b?: number;
+}
+
+export type HistogramChannel = 'lum' | 'r' | 'g' | 'b';
+
 export interface Detection {
   id: string;
   type: DetectionType;
@@ -29,6 +65,8 @@ export interface Detection {
     morphology?: 'coccus' | 'bacillus' | 'spirillum' | 'irregular';
   };
   explanation: string;    // Explainable AI details
+  /** Populated by the measurement pass once image pixels are available. */
+  measured?: Measurement;
 }
 
 export interface SampleImage {
@@ -38,23 +76,30 @@ export interface SampleImage {
   imageUrl: string;
   description: string;
   defaultModel: 'unet' | 'yolo' | 'sam' | 'vit';
-  scale: string; // e.g., "1 px = 0.25 µm"
+  scale: string; // human-readable, e.g. "1 px = 0.25 µm"
   metricUnit: string; // "µm" or "µm²" or "colony"
+  /** Declared spatial calibration for this sample, in µm per pixel. */
+  micronsPerPixel?: number;
+  /** Alternative: physical width of the entire field of view, in µm. */
+  fieldWidthMicrons?: number;
+}
+
+export interface AnalysisSummary {
+  count: number;
+  avgSize: number;
+  avgCircularity: number;
+  density: number; // count per mm² once calibrated, else count per megapixel
+  totalArea?: number;
+  /** True when the figures came from the pixel measurement pass. */
+  measured?: boolean;
+  /** Unit label for avgSize, e.g. "µm²", "mm²" or "px²". */
+  sizeUnit?: string;
 }
 
 export interface AnalysisResult {
   detections: Detection[];
-  summary: {
-    count: number;
-    avgSize: number;
-    avgCircularity: number;
-    density: number; // count per mm²
-    totalArea?: number;
-  };
-  histogramData: {
-    intensity: number;
-    count: number;
-  }[];
+  summary: AnalysisSummary;
+  histogramData: HistogramBin[];
   gradCamOverlay?: string; // Base64 or mock SVG overlay
 }
 
