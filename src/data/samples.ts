@@ -1,55 +1,70 @@
 import { SampleImage, Detection, AnalysisResult, DetectionCategory, DetectionType } from '../types';
 
+// FIX: these were previously referenced as literal '/src/assets/images/...' paths.
+// That only resolves while the Vite dev server is running. In a production build
+// nothing under /src is emitted, so all five sample thumbnails 404'd on Cloud Run.
+// Importing them lets Vite fingerprint and emit them into dist/assets.
+import fluorescenceImg from '../assets/images/sample_fluorescence_1782718007522.jpg';
+import neuronImg from '../assets/images/sample_neuron_1782718022988.jpg';
+import histologyImg from '../assets/images/sample_histology_1782718038594.jpg';
+import bacteriaImg from '../assets/images/sample_bacteria_1782718052920.jpg';
+import plantImg from '../assets/images/sample_plant_1782718067828.jpg';
+
 export const SAMPLE_IMAGES: SampleImage[] = [
   {
     id: 'sample-fluorescence',
     name: 'Fluorescence Cells',
     category: 'cells',
-    imageUrl: '/src/assets/images/sample_fluorescence_1782718007522.jpg',
+    imageUrl: fluorescenceImg,
     description: 'Fluorescence confocal microscopy of bovine pulmonary artery endothelial cells. Blue stains nuclei (DAPI); green stains F-actin microfilaments.',
     defaultModel: 'unet',
     scale: '1 px = 0.16 µm',
-    metricUnit: 'µm²'
+    metricUnit: 'µm²',
+    micronsPerPixel: 0.16,
   },
   {
     id: 'sample-neuron',
     name: 'Cortical Neuron Tracing',
     category: 'neurons',
-    imageUrl: '/src/assets/images/sample_neuron_1782718022988.jpg',
+    imageUrl: neuronImg,
     description: 'Fluorescent silver-stained cortical pyramidal neuron showing extensive dendritic branching and a distinctive primary apical dendrite.',
     defaultModel: 'sam',
     scale: '1 px = 0.32 µm',
-    metricUnit: 'µm'
+    metricUnit: 'µm',
+    micronsPerPixel: 0.32,
   },
   {
     id: 'sample-histology',
     name: 'Breast Tissue H&E Slide',
     category: 'histology',
-    imageUrl: '/src/assets/images/sample_histology_1782718038594.jpg',
+    imageUrl: histologyImg,
     description: 'Hematoxylin and eosin (H&E) stained histology section from breast needle biopsy, featuring lobular epithelium and surrounding stroma.',
     defaultModel: 'yolo',
     scale: '1 px = 0.25 µm',
-    metricUnit: 'µm²'
+    metricUnit: 'µm²',
+    micronsPerPixel: 0.25,
   },
   {
     id: 'sample-bacteria',
     name: 'Bacterial Colony Counter',
     category: 'bacteria',
-    imageUrl: '/src/assets/images/sample_bacteria_1782718052920.jpg',
+    imageUrl: bacteriaImg,
     description: 'Microbial culture agar plate exhibiting distinct colony forming units (CFUs) of Escherichia coli after 24 hours incubation.',
     defaultModel: 'yolo',
     scale: '1 plate = 90 mm',
-    metricUnit: 'colony'
+    metricUnit: 'colony',
+    fieldWidthMicrons: 90000, // 90 mm standard petri plate spans the frame
   },
   {
     id: 'sample-plant',
     name: 'Foliar Stomata & Lesions',
     category: 'plants',
-    imageUrl: '/src/assets/images/sample_plant_1782718067828.jpg',
+    imageUrl: plantImg,
     description: 'Microscopic scanning of a plant leaf epidermis, showing active stomata guard cells and microscopic chlorotic lesions from early fungal inoculation.',
     defaultModel: 'unet',
     scale: '1 px = 0.45 µm',
-    metricUnit: 'µm²'
+    metricUnit: 'µm²',
+    micronsPerPixel: 0.45,
   }
 ];
 
@@ -633,34 +648,29 @@ export function getSampleResult(sampleId: string): AnalysisResult {
 }
 
 // Function to generate high-fidelity simulated results for custom user-uploaded images on the fly
-export function generateUploadedResult(fileName: string, fileType: string): AnalysisResult {
+export function generateUploadedResult(fileName: string): AnalysisResult {
   // Try to parse suitable parameters based on file name or default to cells
   const lowerName = fileName.toLowerCase();
   let category: DetectionCategory = 'cells';
   let prefix = 'up-cell-';
   let type: DetectionType = 'cell';
-  let scaleUnit = 'µm²';
   
   if (lowerName.includes('neuron') || lowerName.includes('brain') || lowerName.includes('nerve')) {
     category = 'neurons';
     prefix = 'up-nr-';
     type = 'soma';
-    scaleUnit = 'µm';
   } else if (lowerName.includes('histo') || lowerName.includes('slide') || lowerName.includes('tissue') || lowerName.includes('biopsy')) {
     category = 'histology';
     prefix = 'up-hs-';
     type = 'nucleus';
-    scaleUnit = 'µm²';
   } else if (lowerName.includes('bacteria') || lowerName.includes('plate') || lowerName.includes('colony') || lowerName.includes('petri')) {
     category = 'bacteria';
     prefix = 'up-bc-';
     type = 'colony';
-    scaleUnit = 'colony';
   } else if (lowerName.includes('plant') || lowerName.includes('leaf') || lowerName.includes('root') || lowerName.includes('stoma')) {
     category = 'plants';
     prefix = 'up-pl-';
     type = 'stomata';
-    scaleUnit = 'µm²';
   }
 
   // Generate 4-8 randomized but highly scientific detections
